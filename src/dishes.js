@@ -1,5 +1,5 @@
-// Dishes that are light and quick to prepare - reserved only for lunch
-export const lunchOnlyDishes = [
+// Light dishes that can be used for both lunch and dinner
+export const lightDishes = [
     "Couscous Chana Salad",
     "Spinach Corn Sandwich",
     "Moong Dal Cheela",
@@ -14,59 +14,44 @@ export const lunchOnlyDishes = [
     "Pasta Salad",
     "Orzo Salad",
     "Smashed Potatoes Salad",
-    "Brussels Sprouts Salad"
-];
-
-// All dishes suitable for lunch (includes lunch-only dishes)
-export const lunchDishes = [
-    // Lunch-only dishes
-    ...lunchOnlyDishes,
-    // Dishes that can be for both lunch and dinner
-    "Tacos",
-    "Egg Curry",
+    "Brussels Sprouts Salad",
+    "Chicken/Veg Tacos",
+    "Egg Curry & Roti",
     "Grilled Chicken Veggies",
-    "Gobhi Aloo Raita",
-    "Spinach Thecha Rice",
+    "Spinach Thecha & Rice",
     "Paneer Kulcha",
     "Aglio e Olio",
-    "Chili Soya and Fried Rice",
-    "Noodles",
-    "Shakshouka",
+    "Soya Pulao",
+    "Veg / Chicken Noodles",
     "Khichdi",
-    "Paneer Bhurji",
-    "Palak Paneer",
-    "Aloo Gobhi Raita",
-    "Chole & Rice",
-    "Peri Peri Chicken / Paneer Rice Bowl"
+    "Paneer Bhurji & Roti",
+    "Peri Peri Chicken / Paneer Rice Bowl",
+    "Sabudana Khichdi",
+    "Upma"
 ];
 
-// Dishes suitable for dinner (excludes lunch-only dishes)
-export const dinnerDishes = [
-    // Heavier dishes primarily for dinner
+// Heavier dishes reserved only for dinner
+export const dinnerOnlyDishes = [
+    "Chole & Rice",
+    "Shakshouka",
     "Lasagna",
-    "Sabudana",
     "Chicken Curry & Roti",
     "Egg Curry & Roti",
-    "Bhindi Raita & Roti",
+    "Bhindi Roti & Raita",
     "Rajma & Rice",
-    "Katsu Curry",
+    "Katsu Curry & Rice",
     "Mushroom / White Sauce Pasta",
-    "Chicken Breast with Veggies",
-    // Dishes that can be for both lunch and dinner
-    "Tacos",
-    "Egg Curry",
-    "Grilled Chicken Veggies",
-    "Gobhi Aloo Raita",
-    "Spinach Thecha Rice",
-    "Paneer Kulcha",
-    "Aglio e Olio",
-    "Chili Soya and Fried Rice",
-    "Noodles",
-    "Shakshouka",
-    "Khichdi",
-    "Paneer Bhurji",
-    "Palak Paneer",
-    "Aloo Gobhi Raita",
-    "Chole & Rice",
-    "Peri Peri Chicken / Paneer Rice Bowl"
+    "Palak Paneer & Rice/Roti",
+    "Aloo Gobhi & Roti & Raita"
+];
+
+// All dishes suitable for lunch (only light dishes)
+export const lunchDishes = [
+    ...lightDishes
+];
+
+// All dishes suitable for dinner (includes both light dishes and dinner-only dishes)
+export const dinnerDishes = [
+    ...lightDishes,
+    ...dinnerOnlyDishes
 ];

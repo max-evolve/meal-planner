@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue';
-import { lunchDishes, dinnerDishes, lunchOnlyDishes } from '../dishes';
+import { lunchDishes, dinnerDishes, lightDishes, dinnerOnlyDishes } from '../dishes';
 
 const mealPlan = ref({});
 
@@ -25,10 +25,13 @@ const generateMealPlan = () => {
   ];
 
   daysOfWeek.forEach(({ day, date }) => {
-    const formattedDate = date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'long' });
+    const formattedDate = date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
+    
+    // For lunch, we can only use light dishes
     const lunch = getRandomDish(lunchDishes, usedDishes);
     if (lunch) usedDishes.add(lunch);
     
+    // For dinner, we can use any dinner dish (light or dinner-only)
     const dinner = getRandomDish(dinnerDishes, usedDishes);
     if (dinner) usedDishes.add(dinner);
 
@@ -44,6 +47,7 @@ const generateMealPlan = () => {
 const replaceDish = (mealType, date) => {
   const usedDishes = new Set();
   
+  // Add all current dishes to the usedDishes set except the one being replaced
   Object.entries(mealPlan.value).forEach(([currentDate, meals]) => {
     if (currentDate !== date || mealType !== 'lunch') {
       if (meals.lunch && meals.lunch !== "No more lunch options") {
@@ -57,10 +61,13 @@ const replaceDish = (mealType, date) => {
     }
   });
 
+  // Get a new dish that's not already used in the week
   if (mealType === 'lunch') {
+    // For lunch, we can only use light dishes
     const newDish = getRandomDish(lunchDishes, usedDishes);
     mealPlan.value[date].lunch = newDish || "No more lunch options";
   } else if (mealType === 'dinner') {
+    // For dinner, we can use any dinner dish (light or dinner-only)
     const newDish = getRandomDish(dinnerDishes, usedDishes);
     mealPlan.value[date].dinner = newDish || "No more dinner options";
   }
@@ -70,10 +77,9 @@ const replaceDish = (mealType, date) => {
 <template>
   <div class="meal-planner">
     <h1>Weekly Meal Planner</h1>
-    <button @click="generateMealPlan">Generate Meal Plan</button>
+    <button @click="generateMealPlan" class="generate-btn">Generate Meal Plan</button>
     
     <div v-if="Object.keys(mealPlan).length" class="meal-table">
-      <h2>Your Meal Plan for the Week</h2>
       <div class="table-wrapper">
         <table>
           <thead>
@@ -85,103 +91,204 @@ const replaceDish = (mealType, date) => {
           </thead>
           <tbody>
             <tr v-for="(meals, date) in mealPlan" :key="date">
-              <td>{{ date }}</td>
-              <td @click="replaceDish('lunch', date)" class="clickable">{{ meals.lunch }}</td>
-              <td @click="replaceDish('dinner', date)" class="clickable">{{ meals.dinner }}</td>
+              <td class="date-cell">{{ date }}</td>
+              <td @click="replaceDish('lunch', date)" class="clickable meal-cell">{{ meals.lunch }}</td>
+              <td @click="replaceDish('dinner', date)" class="clickable meal-cell">{{ meals.dinner }}</td>
             </tr>
           </tbody>
         </table>
       </div>
       <div class="info-text">
-        <p><small>Click on any meal to replace it with another option.</small></p>
+        <p><small>Click on any meal to replace it with another option</small></p>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
+:root {
+  --primary-color: #1877f2;
+  --hover-color: #36a372;
+  --background-color: #ffffff;
+  --text-color: #333333;
+  --border-color: #e0e0e0;
+  --header-bg: #f0f2f5;
+  --even-row-bg: #f9f9f9;
+  --hover-row-bg: #e9ecef;
+  --hover-cell-bg: #e0e0e0;
+}
+
 body {
-  background-color: #ffffff; /* Set the entire background to white */
+  margin: 0;
+  padding: 0;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  font-family: 'Arial', sans-serif;
 }
 
 .meal-planner {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
-  font-family: 'Arial', sans-serif;
-  background-color: #ffffff; /* White background for the planner */
-  /* Removed border-radius and box-shadow */
+  width: 100%;
+  max-width: 100%;
+  padding: 1rem;
+  box-sizing: border-box;
 }
 
 h1 {
-  color: #1877f2; /* Facebook blue */
+  color: var(--primary-color);
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 1.5rem;
+  font-size: 1.8rem;
 }
 
-button {
+.generate-btn {
   display: block;
-  margin: 0 auto;
-  padding: 10px 20px;
-  background-color: #1877f2; /* Facebook blue */
+  margin: 0 auto 1.5rem;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--primary-color);
   color: white;
   border: none;
-  border-radius: 2px;
+  border-radius: 4px;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: background-color 0.3s, transform 0.2s;
+  font-size: 1rem;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-button:hover {
-  background-color: #36a372; /* Darker green on hover */
+.generate-btn:hover {
+  background-color: var(--hover-color);
+  transform: translateY(-2px);
+}
+
+.generate-btn:active {
+  transform: translateY(0);
 }
 
 .meal-table {
-  margin-top: 2rem;
+  margin-top: 1.5rem;
+  width: 100%;
 }
 
 .table-wrapper {
-  max-height: 400px; /* Set a fixed height for the table wrapper */
-  overflow-y: auto; /* Allow scrolling if content exceeds height */
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed; /* Fix the table layout */
+  table-layout: fixed;
+  min-width: 600px; /* Ensures table doesn't get too narrow on mobile */
 }
 
 th, td {
-  border: 1px solid #ddd;
-  padding: 8px; /* Reduced padding for smaller cell height */
+  padding: 0.75rem;
   text-align: left;
-  color: black; /* Black text */
-  height: 30px; /* Reduced height for rows */
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 th {
-  background-color: #f0f2f5; /* Light gray for header */
+  background-color: var(--header-bg);
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.date-cell {
+  width: 20%;
+  font-weight: 500;
+}
+
+.meal-cell {
+  width: 40%;
 }
 
 tr:nth-child(even) {
-  background-color: #f9f9f9; /* Light gray for even rows */
+  background-color: var(--even-row-bg);
 }
 
 tr:hover {
-  background-color: #e9ecef; /* Slightly darker gray on hover */
+  background-color: var(--hover-row-bg);
 }
 
 .clickable {
-  cursor: pointer; /* Change cursor to pointer for clickable cells */
-  transition: background-color 0.3s;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  position: relative;
 }
 
 .clickable:hover {
-  background-color: #e0e0e0; /* Highlight on hover */
+  background-color: var(--hover-cell-bg);
+}
+
+.clickable:active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.05);
+  pointer-events: none;
 }
 
 .info-text {
-  margin-top: 1rem;
   text-align: center;
   color: #666;
+  margin-top: 0.5rem;
+}
+
+/* Media Queries for Responsive Design */
+@media (max-width: 768px) {
+  .meal-planner {
+    padding: 0.75rem;
+  }
+  
+  h1 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .generate-btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+  }
+  
+  th, td {
+    padding: 0.6rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  h1 {
+    font-size: 1.3rem;
+  }
+  
+  .generate-btn {
+    width: 100%;
+    padding: 0.5rem;
+  }
+  
+  th, td {
+    padding: 0.5rem;
+    font-size: 0.8rem;
+  }
+  
+  .date-cell {
+    width: 25%;
+  }
+  
+  .meal-cell {
+    width: 37.5%;
+  }
 }
 </style>
