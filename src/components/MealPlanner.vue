@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue';
-import { lunchDishes, dinnerDishes } from '../dishes';
+import { lunchDishes, dinnerDishes, lunchOnlyDishes } from '../dishes';
 
 const mealPlan = ref({});
 
@@ -13,8 +13,7 @@ const getRandomDish = (dishes, usedDishes) => {
 
 const generateMealPlan = () => {
   const newPlan = {};
-  const usedLunchDishes = new Set();
-  const usedDinnerDishes = new Set();
+  const usedDishes = new Set();
   const daysOfWeek = [
     { day: "Monday", date: new Date() },
     { day: "Tuesday", date: new Date(Date.now() + 86400000) },
@@ -27,11 +26,11 @@ const generateMealPlan = () => {
 
   daysOfWeek.forEach(({ day, date }) => {
     const formattedDate = date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'long' });
-    const lunch = getRandomDish(lunchDishes, usedLunchDishes);
-    const dinner = getRandomDish(dinnerDishes, usedDinnerDishes);
-
-    if (lunch) usedLunchDishes.add(lunch);
-    if (dinner) usedDinnerDishes.add(dinner);
+    const lunch = getRandomDish(lunchDishes, usedDishes);
+    if (lunch) usedDishes.add(lunch);
+    
+    const dinner = getRandomDish(dinnerDishes, usedDishes);
+    if (dinner) usedDishes.add(dinner);
 
     newPlan[formattedDate] = {
       lunch: lunch || "No more lunch options",
@@ -42,9 +41,21 @@ const generateMealPlan = () => {
   mealPlan.value = newPlan;
 };
 
-// Function to replace a meal with a new random dish
 const replaceDish = (mealType, date) => {
-  const usedDishes = new Set(Object.values(mealPlan.value).flatMap(meal => meal.lunch).concat(Object.values(mealPlan.value).flatMap(meal => meal.dinner)));
+  const usedDishes = new Set();
+  
+  Object.entries(mealPlan.value).forEach(([currentDate, meals]) => {
+    if (currentDate !== date || mealType !== 'lunch') {
+      if (meals.lunch && meals.lunch !== "No more lunch options") {
+        usedDishes.add(meals.lunch);
+      }
+    }
+    if (currentDate !== date || mealType !== 'dinner') {
+      if (meals.dinner && meals.dinner !== "No more dinner options") {
+        usedDishes.add(meals.dinner);
+      }
+    }
+  });
 
   if (mealType === 'lunch') {
     const newDish = getRandomDish(lunchDishes, usedDishes);
@@ -80,6 +91,9 @@ const replaceDish = (mealType, date) => {
             </tr>
           </tbody>
         </table>
+      </div>
+      <div class="info-text">
+        <p><small>Click on any meal to replace it with another option.</small></p>
       </div>
     </div>
   </div>
@@ -163,5 +177,11 @@ tr:hover {
 
 .clickable:hover {
   background-color: #e0e0e0; /* Highlight on hover */
+}
+
+.info-text {
+  margin-top: 1rem;
+  text-align: center;
+  color: #666;
 }
 </style>
