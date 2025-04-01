@@ -1,9 +1,12 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { lunchDishes, dinnerDishes } from '../dishes';
 
 // Combine all dishes
 const allDishes = [...new Set([...lunchDishes, ...dinnerDishes])];
+
+// Compute base path for assets
+const basePath = computed(() => import.meta.env.PROD ? '/meal-planner' : '');
 
 // Function to get image URL for a dish
 const getDishImage = (dish) => {
@@ -21,7 +24,7 @@ const getDishImage = (dish) => {
   
   // Check for direct mapping first
   if (directMappings[dish]) {
-    return directMappings[dish];
+    return `${basePath.value}${directMappings[dish]}`;
   }
   
   // Convert dish name to kebab case for image filename
@@ -53,7 +56,7 @@ const getDishImage = (dish) => {
   
   const imageName = specialCases[kebabCase] || kebabCase;
   
-  return `/images/${imageName}.jpg`;
+  return `${basePath.value}/images/${imageName}.jpg`;
 };
 
 // Track image loading status

@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { lunchDishes, dinnerDishes, lightDishes, dinnerOnlyDishes } from '../dishes';
 
 // Changed data structure to organize by day name
@@ -17,6 +17,12 @@ const mealPlan = ref({
 const showModal = ref(false);
 const modalOptions = ref([]);
 const currentSelection = ref({ day: null, mealType: null });
+
+// Compute base path for assets
+const basePath = computed(() => import.meta.env.PROD ? '/meal-planner' : '');
+
+// Create path for eating out image
+const eatingOutImagePath = computed(() => `${basePath.value}/images/fat_couple.jpg`);
 
 const daysOfWeek = [
   "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
@@ -51,7 +57,7 @@ const weekDates = ref(getWeekDates());
 // with the kebab-case name of the dish (e.g., "couscous-chana-salad.jpg")
 const getDishImage = (dish) => {
   if (!dish || dish === "No more lunch options" || dish === "No more dinner options") {
-    return '/images/default.jpg';
+    return `${basePath.value}/images/default.jpg`;
   }
   
   // Special naming cases for dishes that don't follow standard mapping
@@ -69,7 +75,7 @@ const getDishImage = (dish) => {
   // Check for direct mapping first
   if (directMappings[dish]) {
     console.log(`Using direct mapping for ${dish}: ${directMappings[dish]}`);
-    return directMappings[dish];
+    return `${basePath.value}${directMappings[dish]}`;
   }
   
   // Convert dish name to kebab case for image filename
@@ -102,7 +108,7 @@ const getDishImage = (dish) => {
   const imageName = specialCases[kebabCase] || kebabCase;
   console.log(`Mapped ${dish} (${kebabCase}) to ${imageName}.jpg`);
   
-  return `/images/${imageName}.jpg`;
+  return `${basePath.value}/images/${imageName}.jpg`;
 };
 
 // Function to get available dishes for a specific meal type
@@ -244,7 +250,7 @@ const checkForMeals = () => {
         >
           <div class="meal-content" v-if="mealPlan[day].lunch">
             <img 
-              :src="mealPlan[day].lunch === 'Eating Out' ? '/images/fat_couple.jpg' : getDishImage(mealPlan[day].lunch)" 
+              :src="mealPlan[day].lunch === 'Eating Out' ? eatingOutImagePath : getDishImage(mealPlan[day].lunch)" 
               :alt="mealPlan[day].lunch" 
               class="dish-image"
               :class="{'eating-out': mealPlan[day].lunch === 'Eating Out'}"
@@ -266,7 +272,7 @@ const checkForMeals = () => {
         >
           <div class="meal-content" v-if="mealPlan[day].dinner">
             <img 
-              :src="mealPlan[day].dinner === 'Eating Out' ? '/images/fat_couple.jpg' : getDishImage(mealPlan[day].dinner)" 
+              :src="mealPlan[day].dinner === 'Eating Out' ? eatingOutImagePath : getDishImage(mealPlan[day].dinner)" 
               :alt="mealPlan[day].dinner" 
               class="dish-image"
               :class="{'eating-out': mealPlan[day].dinner === 'Eating Out'}"
