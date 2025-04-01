@@ -3,5 +3,5 @@ import vue from '@vitejs/plugin-vue';
 
 export default defineConfig({
   plugins: [vue()],
-  base: '/', // Changed from '/meal-planner/' for local development
+  base: '/food_plan/', // Changed to match repository name for GitHub Pages
 });
