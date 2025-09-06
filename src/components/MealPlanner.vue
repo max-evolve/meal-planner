@@ -144,7 +144,7 @@ const formatMealPlanForWhatsApp = () => {
     const dinner = mealPlan.value[dayName]?.dinner || "Not planned";
     
     // Format each day with better structure
-    message += `*${index + 1}. ${dateStr}*\n`;
+    message += `*${index + 1}. ${dayName}, ${dateStr}*\n`;
     message += `   🥗 Lunch: ${lunch}\n`;
     message += `   🍽️ Dinner: ${dinner}\n\n`;
   });
@@ -459,7 +459,7 @@ const checkForMeals = () => {
       <!-- WhatsApp Share Button -->
       <div class="share-section">
         <button class="whatsapp-btn" @click="shareToWhatsApp">
-          📱 Share to WhatsApp
+          💬 Share to WhatsApp
         </button>
       </div>
     </div>
