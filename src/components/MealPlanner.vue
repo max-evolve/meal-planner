@@ -222,6 +222,18 @@ const selectOption = (option) => {
   showModal.value = false;
 };
 
+// Function to handle double-click for creating new dishes
+const handleDoubleClick = (mealType, day) => {
+  const dishName = prompt('Enter new dish name:');
+  if (dishName && dishName.trim()) {
+    const newDishName = toTitleCase(dishName.trim());
+    // Add to light dishes (making it available for both lunch and dinner)
+    lightDishesReactive.value.push(newDishName);
+    // Set the meal to the new dish
+    mealPlan.value[day][mealType] = newDishName;
+  }
+};
+
 // Original functions with minor modifications
 const getRandomDish = (dishes, usedDishes) => {
   const availableDishes = dishes.filter(dish => !usedDishes.has(dish));
@@ -338,6 +350,7 @@ const checkForMeals = () => {
         <div 
           class="meal-cell" 
           @click="openDishOptions('lunch', dayData.dayName)"
+          @dblclick="handleDoubleClick('lunch', dayData.dayName)"
           :style="mealPlan[dayData.dayName]?.lunch && duplicateColors[mealPlan[dayData.dayName].lunch] ? 
             { backgroundColor: duplicateColors[mealPlan[dayData.dayName].lunch] } : {}"
         >
@@ -351,6 +364,7 @@ const checkForMeals = () => {
         <div 
           class="meal-cell" 
           @click="openDishOptions('dinner', dayData.dayName)"
+          @dblclick="handleDoubleClick('dinner', dayData.dayName)"
           :style="mealPlan[dayData.dayName]?.dinner && duplicateColors[mealPlan[dayData.dayName].dinner] ? 
             { backgroundColor: duplicateColors[mealPlan[dayData.dayName].dinner] } : {}"
         >
@@ -362,7 +376,7 @@ const checkForMeals = () => {
       </div>
       
       <div class="info-text">
-        <p><small>Click on any meal to replace it with another option</small></p>
+        <p><small>Click to select from list • Double-click to add new dish</small></p>
       </div>
     </div>
     
@@ -793,8 +807,8 @@ h1 {
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   width: 100%;
-  max-width: 400px;
-  max-height: 80vh;
+  max-width: 450px;
+  max-height: 85vh;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -833,6 +847,8 @@ h1 {
 .close-btn-header:hover {
   background-color: #f0f0f0;
 }
+
+/* Removed random section styles (no longer needed) */
 
 .eating-out-option {
   background-color: #fff3e0 !important;
@@ -969,8 +985,10 @@ h1 {
   }
   
   .modal-content {
-    max-width: 350px;
+    max-width: 380px;
   }
+  
+  /* Removed random section responsive styles */
   
   .modal-header {
     padding: 0.75rem 0.75rem 0.5rem 0.75rem;
@@ -1049,6 +1067,8 @@ h1 {
     padding: 0.5rem;
     font-size: 0.8rem;
   }
+  
+  /* Removed random section mobile styles */
   
   .close-btn-footer {
     margin: 0.4rem 0.6rem 0.6rem 0.6rem;
