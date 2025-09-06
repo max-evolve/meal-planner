@@ -12,6 +12,7 @@ const currentSelection = ref({ day: null, mealType: null });
 const searchQuery = ref('');
 const allDishes = ref([]);
 const usedDishes = ref(new Set());
+const clickTimeout = ref(null);
 
 // Reactive arrays for dishes (so we can add new ones)
 const lightDishesReactive = ref([...lightDishes]);
@@ -222,15 +223,60 @@ const selectOption = (option) => {
   showModal.value = false;
 };
 
-// Function to handle double-click for creating new dishes
+// Function to handle single click with delay (to allow double-click)
+const handleSingleClick = (mealType, day) => {
+  // Clear any existing timeout
+  if (clickTimeout.value) {
+    clearTimeout(clickTimeout.value);
+  }
+  
+  // Set a timeout to open modal after delay
+  clickTimeout.value = setTimeout(() => {
+    openDishOptions(mealType, day);
+  }, 300); // 300ms delay to allow for double-click
+};
+
+// Function to handle double-click for random dish selection
 const handleDoubleClick = (mealType, day) => {
-  const dishName = prompt('Enter new dish name:');
-  if (dishName && dishName.trim()) {
-    const newDishName = toTitleCase(dishName.trim());
-    // Add to light dishes (making it available for both lunch and dinner)
-    lightDishesReactive.value.push(newDishName);
-    // Set the meal to the new dish
-    mealPlan.value[day][mealType] = newDishName;
+  // Clear the single-click timeout to prevent modal from opening
+  if (clickTimeout.value) {
+    clearTimeout(clickTimeout.value);
+    clickTimeout.value = null;
+  }
+  // Get all possible dishes
+  const allPossibleDishes = [...lightDishesReactive.value, ...dinnerOnlyDishesReactive.value];
+  
+  // Get currently used dishes (excluding the one being replaced)
+  const currentlyUsed = new Set();
+  weekData.value.forEach(dayData => {
+    const currentDay = dayData.dayName;
+    if (currentDay !== day || mealType !== 'lunch') {
+      if (mealPlan.value[currentDay]?.lunch && mealPlan.value[currentDay].lunch !== "No more lunch options" && mealPlan.value[currentDay].lunch !== "Eating Out") {
+        currentlyUsed.add(mealPlan.value[currentDay].lunch);
+      }
+    }
+    if (currentDay !== day || mealType !== 'dinner') {
+      if (mealPlan.value[currentDay]?.dinner && mealPlan.value[currentDay].dinner !== "No more dinner options" && mealPlan.value[currentDay].dinner !== "Eating Out") {
+        currentlyUsed.add(mealPlan.value[currentDay].dinner);
+      }
+    }
+  });
+  
+  // Filter available dishes (exclude already used ones)
+  const availableDishes = allPossibleDishes.filter(dish => !currentlyUsed.has(dish));
+  
+  // Select random dish
+  if (availableDishes.length > 0) {
+    const randomIndex = Math.floor(Math.random() * availableDishes.length);
+    const randomDish = availableDishes[randomIndex];
+    mealPlan.value[day][mealType] = randomDish;
+  } else {
+    // If no available dishes, use any dish
+    if (allPossibleDishes.length > 0) {
+      const randomIndex = Math.floor(Math.random() * allPossibleDishes.length);
+      const randomDish = allPossibleDishes[randomIndex];
+      mealPlan.value[day][mealType] = randomDish;
+    }
   }
 };
 
@@ -349,7 +395,7 @@ const checkForMeals = () => {
         <!-- Lunch Cell -->
         <div 
           class="meal-cell" 
-          @click="openDishOptions('lunch', dayData.dayName)"
+          @click="handleSingleClick('lunch', dayData.dayName)"
           @dblclick="handleDoubleClick('lunch', dayData.dayName)"
           :style="mealPlan[dayData.dayName]?.lunch && duplicateColors[mealPlan[dayData.dayName].lunch] ? 
             { backgroundColor: duplicateColors[mealPlan[dayData.dayName].lunch] } : {}"
@@ -363,7 +409,7 @@ const checkForMeals = () => {
         <!-- Dinner Cell -->
         <div 
           class="meal-cell" 
-          @click="openDishOptions('dinner', dayData.dayName)"
+          @click="handleSingleClick('dinner', dayData.dayName)"
           @dblclick="handleDoubleClick('dinner', dayData.dayName)"
           :style="mealPlan[dayData.dayName]?.dinner && duplicateColors[mealPlan[dayData.dayName].dinner] ? 
             { backgroundColor: duplicateColors[mealPlan[dayData.dayName].dinner] } : {}"
@@ -376,7 +422,7 @@ const checkForMeals = () => {
       </div>
       
       <div class="info-text">
-        <p><small>Click to select from list • Double-click to add new dish</small></p>
+        <p><small>Click to select from list • Double-click for random dish</small></p>
       </div>
     </div>
     
@@ -875,7 +921,7 @@ h1 {
   padding: 0.75rem;
   border: 2px solid #e9ecef;
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: 16px; /* Prevent zoom on iOS */
   transition: border-color 0.2s;
 }
 
@@ -1004,7 +1050,7 @@ h1 {
   
   .search-input {
     padding: 0.6rem;
-    font-size: 0.85rem;
+    font-size: 16px; /* Maintain 16px to prevent zoom */
   }
   
   .dish-text-option {
@@ -1021,59 +1067,73 @@ h1 {
 
 @media (max-width: 480px) {
   .modal-overlay {
-    padding: 0.25rem;
+    padding: 0;
+    align-items: flex-start;
   }
   
   .modal-content {
     max-width: none;
     width: 100%;
-    max-height: 85vh;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
   }
   
   .modal-header {
-    padding: 0.6rem;
+    padding: 1rem;
+    position: sticky;
+    top: 0;
+    background-color: white;
+    z-index: 10;
   }
   
   .modal-header h2 {
-    font-size: 0.95rem;
+    font-size: 1.1rem;
   }
   
   .close-btn-header {
-    width: 28px;
-    height: 28px;
-    font-size: 1.3rem;
+    width: 32px;
+    height: 32px;
+    font-size: 1.5rem;
   }
   
   .dish-list {
-    padding: 0.6rem;
+    padding: 1rem;
+    flex: 1;
+    overflow-y: auto;
   }
   
   .dish-list h3 {
-    font-size: 0.9rem;
-    margin-bottom: 0.6rem;
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
   }
   
   .dish-text-list {
-    gap: 0.4rem;
-    max-height: 250px;
+    gap: 0.5rem;
+    max-height: none;
   }
   
   .search-input {
-    padding: 0.5rem;
-    font-size: 0.8rem;
+    padding: 0.75rem;
+    font-size: 16px; /* Maintain 16px to prevent zoom */
   }
   
   .dish-text-option {
-    padding: 0.5rem;
-    font-size: 0.8rem;
+    padding: 0.75rem;
+    font-size: 0.9rem;
+    min-height: 48px; /* Better touch target */
   }
   
   /* Removed random section mobile styles */
   
   .close-btn-footer {
-    margin: 0.4rem 0.6rem 0.6rem 0.6rem;
-    padding: 0.5rem;
-    font-size: 0.8rem;
+    margin: 0;
+    padding: 1rem;
+    font-size: 1rem;
+    position: sticky;
+    bottom: 0;
+    background-color: white;
+    border-top: 1px solid #eee;
   }
 }
 </style>

@@ -26,7 +26,8 @@ export const lightDishes = [
     "Noodles - Veg",
     "Khichdi",
     "Paneer Bhurji & Roti",
-    "Peri Peri Chicken / Paneer Rice Bowl",
+    "Rice Bowl - Peri Peri Chicken",
+    "Rice Bowl - Peri Peri Paneer",
     "Sabudana Khichdi",
     "Upma"
 ];
