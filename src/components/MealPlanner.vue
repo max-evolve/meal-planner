@@ -2,128 +2,152 @@
 import { ref, computed } from 'vue';
 import { lunchDishes, dinnerDishes, lightDishes, dinnerOnlyDishes } from '../dishes';
 
-// Changed data structure to organize by day name
-const mealPlan = ref({
-  Monday: { lunch: null, dinner: null },
-  Tuesday: { lunch: null, dinner: null },
-  Wednesday: { lunch: null, dinner: null },
-  Thursday: { lunch: null, dinner: null },
-  Friday: { lunch: null, dinner: null },
-  Saturday: { lunch: null, dinner: null },
-  Sunday: { lunch: null, dinner: null }
-});
+// Dynamic meal plan structure based on actual days
+const mealPlan = ref({});
 
 // Add new refs for the dish selection modal
 const showModal = ref(false);
 const modalOptions = ref([]);
 const currentSelection = ref({ day: null, mealType: null });
+const searchQuery = ref('');
+const allDishes = ref([]);
+const usedDishes = ref(new Set());
+
+// Reactive arrays for dishes (so we can add new ones)
+const lightDishesReactive = ref([...lightDishes]);
+const dinnerOnlyDishesReactive = ref([...dinnerOnlyDishes]);
+
+// Helper function to convert text to Title Case
+const toTitleCase = (str) => {
+  return str.replace(/\w\S*/g, (txt) => {
+    return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+  });
+};
 
 // Compute base path for assets
 const basePath = computed(() => import.meta.env.PROD ? '/meal-planner' : '');
 
-// Create path for eating out image
-const eatingOutImagePath = computed(() => `${basePath.value}/images/fat_couple.jpg`);
+// Removed eating out image path (no longer needed)
 
-const daysOfWeek = [
-  "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
-];
+// Add selected start date ref
+const selectedStartDate = ref(new Date());
 
-// Function to get the dates for each day of the week
-const getWeekDates = () => {
+// Function to generate date options (today + next 6 days)
+const getDateOptions = () => {
+  const options = [];
   const today = new Date();
-  const dayOfWeek = today.getDay(); // 0 for Sunday, 1 for Monday, etc.
   
-  // Calculate the Monday of this week
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-  
-  // Generate all dates for the week
-  const dates = [];
   for (let i = 0; i < 7; i++) {
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + i);
-    dates.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+    const date = new Date(today);
+    date.setDate(today.getDate() + i);
+    
+    const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+    const dateStr = date.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+    const fullDateStr = `${dayName}, ${dateStr}`;
+    
+    options.push({
+      date: new Date(date),
+      display: fullDateStr,
+      value: date.toISOString().split('T')[0] // YYYY-MM-DD format for value
+    });
   }
   
-  return dates;
+  return options;
 };
 
-// Store the current week's dates
-const weekDates = ref(getWeekDates());
+// Store date options
+const dateOptions = ref(getDateOptions());
 
-// Function to get image URL for a dish
-// Images are now stored locally in the public/images folder
-// To replace an image, simply add a new image file to that folder
-// with the kebab-case name of the dish (e.g., "couscous-chana-salad.jpg")
-const getDishImage = (dish) => {
-  if (!dish || dish === "No more lunch options" || dish === "No more dinner options") {
-    return `${basePath.value}/images/default.jpg`;
+// Function to get the week data (day names and dates) starting from selected date
+const getWeekData = (startDate = selectedStartDate.value) => {
+  const weekData = [];
+  
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(startDate);
+    date.setDate(startDate.getDate() + i);
+    
+    weekData.push({
+      dayName: date.toLocaleDateString('en-US', { weekday: 'long' }),
+      dateStr: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      dateKey: date.toLocaleDateString('en-US', { weekday: 'long' }) // Use actual day name as key
+    });
   }
   
-  // Special naming cases for dishes that don't follow standard mapping
-  const directMappings = {
-    "Soya Pulao": "/images/chili-soya-fried-rice.jpg",
-    "Chicken/Veg Tacos": "/images/tacos.jpg",
-    "Veg / Chicken Noodles": "/images/noodles.jpg",
-    "Upma": "/images/vermicelli.jpg",
-    "Palak Paneer & Rice/Roti": "/images/palak-paneer.jpg",
-    "Bhindi Roti & Raita": "/images/bhindi-raita-roti.jpg",
-    "Katsu Curry & Rice": "/images/katsu-curry.jpg",
-    "Shakshouka": "/images/shakshouka.jpg"
-  };
-  
-  // Check for direct mapping first
-  if (directMappings[dish]) {
-    console.log(`Using direct mapping for ${dish}: ${directMappings[dish]}`);
-    return `${basePath.value}${directMappings[dish]}`;
-  }
-  
-  // Convert dish name to kebab case for image filename
-  const kebabCase = dish.toLowerCase()
-    .replace(/\s+/g, '-')     // Replace spaces with hyphens
-    .replace(/\//g, '-')      // Replace slashes with hyphens
-    .replace(/&/g, '-and-')   // Replace & with 'and'
-    .replace(/[^\w-]/g, '');  // Remove special characters except hyphens
-  
-  // For simplicity, map specific cases that need special handling
-  const specialCases = {
-    'chili-soya-and-fried-rice': 'chili-soya-fried-rice',
-    'peri-peri-chicken--paneer-rice-bowl': 'peri-peri-chicken-rice-bowl',
-    'mushroom--white-sauce-pasta': 'mushroom-white-sauce-pasta',
-    'aloo-gobhi-and-roti-and-raita': 'aloo-gobhi-roti-raita',
-    'rajma-and-rice': 'rajma-rice',
-    'chicken-curry-and-roti': 'chicken-curry-roti',
-    'egg-curry-and-roti': 'egg-curry-roti',
-    'bhindi-raita-and-roti': 'bhindi-raita-roti',
-    'paneer-bhurji-and-roti': 'paneer-bhurji-roti',
-    'chole-and-rice': 'chole-rice',
-    'chickenveg-tacos': 'tacos',
-    'veg--chicken-noodles': 'noodles',
-    'katsu-curry-and-rice': 'katsu-curry',
-    'palak-paneer-and-riceroti': 'palak-paneer',
-    'bhindi-roti-and-raita': 'bhindi-raita-roti',
-    'gobhi-aloo-raita': 'gobhi-aloo-raita'
-  };
-  
-  const imageName = specialCases[kebabCase] || kebabCase;
-  console.log(`Mapped ${dish} (${kebabCase}) to ${imageName}.jpg`);
-  
-  return `${basePath.value}/images/${imageName}.jpg`;
+  return weekData;
 };
+
+// Store the current week's data
+const weekData = ref(getWeekData());
+
+// Computed property for filtered dishes based on search
+const filteredDishes = computed(() => {
+  if (!searchQuery.value) {
+    return allDishes.value;
+  }
+  const filtered = allDishes.value.filter(dish => 
+    dish.toLowerCase().includes(searchQuery.value.toLowerCase())
+  );
+  
+  // If no matches found and there's a search query, show "Add new" option
+  if (filtered.length === 0 && searchQuery.value.trim()) {
+    return [`Add "${toTitleCase(searchQuery.value.trim())}" To List`];
+  }
+  
+  return filtered;
+});
+
+// Computed property to detect duplicate dishes and assign colors
+const duplicateColors = computed(() => {
+  const dishCounts = {};
+  const colorMap = {};
+  const colors = [
+    '#ffcdd2', '#f8bbd9', '#e1bee7', '#d1c4e9', '#c5cae9',
+    '#bbdefb', '#b3e5fc', '#b2ebf2', '#b2dfdb', '#c8e6c8',
+    '#dcedc8', '#f0f4c3', '#fff9c4', '#ffecb3', '#ffe0b2'
+  ];
+  let colorIndex = 0;
+  
+  // Count occurrences of each dish
+  weekData.value.forEach(dayData => {
+    const dayName = dayData.dayName;
+    const lunch = mealPlan.value[dayName]?.lunch;
+    const dinner = mealPlan.value[dayName]?.dinner;
+    
+    if (lunch && lunch !== "Eating Out") {
+      dishCounts[lunch] = (dishCounts[lunch] || 0) + 1;
+    }
+    if (dinner && dinner !== "Eating Out") {
+      dishCounts[dinner] = (dishCounts[dinner] || 0) + 1;
+    }
+  });
+  
+  // Assign colors to dishes that appear more than once
+  Object.keys(dishCounts).forEach(dish => {
+    if (dishCounts[dish] > 1) {
+      colorMap[dish] = colors[colorIndex % colors.length];
+      colorIndex++;
+    }
+  });
+  
+  return colorMap;
+});
+
+// Removed getDishImage function (no longer using images)
 
 // Function to get available dishes for a specific meal type
 const getAvailableDishes = (mealType, day) => {
   const usedDishes = new Set();
   
   // Add all current dishes to the usedDishes set except the one being replaced
-  daysOfWeek.forEach(currentDay => {
+  weekData.value.forEach(dayData => {
+    const currentDay = dayData.dayName;
     if (currentDay !== day || mealType !== 'lunch') {
-      if (mealPlan.value[currentDay].lunch && mealPlan.value[currentDay].lunch !== "No more lunch options" && mealPlan.value[currentDay].lunch !== "Eating Out") {
+      if (mealPlan.value[currentDay]?.lunch && mealPlan.value[currentDay].lunch !== "No more lunch options" && mealPlan.value[currentDay].lunch !== "Eating Out") {
         usedDishes.add(mealPlan.value[currentDay].lunch);
       }
     }
     if (currentDay !== day || mealType !== 'dinner') {
-      if (mealPlan.value[currentDay].dinner && mealPlan.value[currentDay].dinner !== "No more dinner options" && mealPlan.value[currentDay].dinner !== "Eating Out") {
+      if (mealPlan.value[currentDay]?.dinner && mealPlan.value[currentDay].dinner !== "No more dinner options" && mealPlan.value[currentDay].dinner !== "Eating Out") {
         usedDishes.add(mealPlan.value[currentDay].dinner);
       }
     }
@@ -141,11 +165,31 @@ const getAvailableDishes = (mealType, day) => {
 const openDishOptions = (mealType, day) => {
   currentSelection.value = { day, mealType };
   
-  // Get available dishes
-  const availableDishes = getAvailableDishes(mealType, day);
+  // Get ALL dishes regardless of lunch/dinner categorization (using reactive arrays)
+  const allPossibleDishes = [...lightDishesReactive.value, ...dinnerOnlyDishesReactive.value];
   
-  // Add the three options
-  modalOptions.value = availableDishes;
+  // Get currently used dishes (excluding the one being replaced)
+  const currentlyUsed = new Set();
+  weekData.value.forEach(dayData => {
+    const currentDay = dayData.dayName;
+    if (currentDay !== day || mealType !== 'lunch') {
+      if (mealPlan.value[currentDay]?.lunch && mealPlan.value[currentDay].lunch !== "No more lunch options" && mealPlan.value[currentDay].lunch !== "Eating Out") {
+        currentlyUsed.add(mealPlan.value[currentDay].lunch);
+      }
+    }
+    if (currentDay !== day || mealType !== 'dinner') {
+      if (mealPlan.value[currentDay]?.dinner && mealPlan.value[currentDay].dinner !== "No more dinner options" && mealPlan.value[currentDay].dinner !== "Eating Out") {
+        currentlyUsed.add(mealPlan.value[currentDay].dinner);
+      }
+    }
+  });
+  
+  // Store all dishes and used dishes for the modal
+  allDishes.value = allPossibleDishes.sort((a, b) => a.localeCompare(b));
+  usedDishes.value = currentlyUsed;
+  
+  // Clear search query
+  searchQuery.value = '';
   
   // Show the modal
   showModal.value = true;
@@ -155,22 +199,22 @@ const openDishOptions = (mealType, day) => {
 const selectOption = (option) => {
   const { day, mealType } = currentSelection.value;
   
-  if (option === 'random') {
-    // Choose randomly
-    const availableDishes = getAvailableDishes(mealType, day);
-    if (availableDishes.length > 0) {
-      const randomIndex = Math.floor(Math.random() * availableDishes.length);
-      mealPlan.value[day][mealType] = availableDishes[randomIndex];
-    } else {
-      mealPlan.value[day][mealType] = `No more ${mealType} options`;
-    }
-  } 
-  else if (option === 'eating-out') {
+  if (option === 'eating-out') {
     // Set as Eating Out
     mealPlan.value[day][mealType] = "Eating Out";
   }
+  else if (option.startsWith('Add "') && option.endsWith('" To List')) {
+    // Extract the new dish name from the option
+    const newDishName = option.slice(5, -9); // Remove 'Add "' and '" To List'
+    
+    // Add to light dishes (making it available for both lunch and dinner)
+    lightDishesReactive.value.push(newDishName);
+    
+    // Set the meal to the new dish
+    mealPlan.value[day][mealType] = newDishName;
+  }
   else {
-    // User selected a specific dish
+    // User selected a specific dish (allow even if already used)
     mealPlan.value[day][mealType] = option;
   }
   
@@ -189,11 +233,16 @@ const getRandomDish = (dishes, usedDishes) => {
 const generateMealPlan = () => {
   const usedDishes = new Set();
   
-  // Update the week dates when generating a new meal plan
-  weekDates.value = getWeekDates();
+  // Update the week data when generating a new meal plan using selected start date
+  weekData.value = getWeekData(selectedStartDate.value);
+  
+  // Clear existing meal plan
+  mealPlan.value = {};
   
   // Generate a meal plan for each day of the week
-  daysOfWeek.forEach(day => {
+  weekData.value.forEach(dayData => {
+    const dayName = dayData.dayName;
+    
     // For lunch, we can only use light dishes
     const lunch = getRandomDish(lunchDishes, usedDishes);
     if (lunch) usedDishes.add(lunch);
@@ -202,11 +251,22 @@ const generateMealPlan = () => {
     const dinner = getRandomDish(dinnerDishes, usedDishes);
     if (dinner) usedDishes.add(dinner);
 
-    mealPlan.value[day] = {
+    mealPlan.value[dayName] = {
       lunch: lunch || "No more lunch options",
       dinner: dinner || "No more dinner options"
     };
   });
+};
+
+// Function to handle date selection change
+const onDateChange = (event) => {
+  const selectedValue = event.target.value;
+  const selectedOption = dateOptions.value.find(option => option.value === selectedValue);
+  if (selectedOption) {
+    selectedStartDate.value = selectedOption.date;
+    // Update week data immediately when date changes
+    weekData.value = getWeekData(selectedStartDate.value);
+  }
 };
 
 // Original replaceDish function is now only used by the random option selector
@@ -216,8 +276,8 @@ const hasMeals = ref(false);
 
 // New function to check if we have meals planned
 const checkForMeals = () => {
-  hasMeals.value = daysOfWeek.some(day => 
-    mealPlan.value[day].lunch !== null || mealPlan.value[day].dinner !== null
+  hasMeals.value = weekData.value.some(dayData => 
+    mealPlan.value[dayData.dayName]?.lunch !== null || mealPlan.value[dayData.dayName]?.dinner !== null
   );
 };
 </script>
@@ -225,59 +285,77 @@ const checkForMeals = () => {
 <template>
   <div class="meal-planner">
     <h1>Weekly Meal Planner</h1>
-    <button @click="generateMealPlan(); hasMeals = true;" class="generate-btn">
-      Generate Meal Plan
-    </button>
+    
+    <div class="controls-section">
+      <div class="date-selector">
+        <label for="start-date">Start Date:</label>
+        <select 
+          id="start-date" 
+          :value="selectedStartDate.toISOString().split('T')[0]" 
+          @change="onDateChange"
+          class="date-select"
+        >
+          <option 
+            v-for="option in dateOptions" 
+            :key="option.value" 
+            :value="option.value"
+          >
+            {{ option.display }}
+          </option>
+        </select>
+      </div>
+      
+      <button @click="generateMealPlan(); hasMeals = true;" class="generate-btn">
+        Generate Meal Plan
+      </button>
+    </div>
     
     <div v-if="hasMeals" class="weekly-calendar">
-      <!-- Calendar Header Row -->
+      <!-- Calendar Header Row - Now shows meal types -->
       <div class="calendar-header">
         <div class="corner-cell"></div>
-        <div class="day-header" v-for="(day, index) in daysOfWeek" :key="day">
-          <div class="day-name">{{ day }}</div>
-          <div class="day-date">{{ weekDates[index] }}</div>
+        <div class="meal-header">
+          <div class="meal-name">Lunch</div>
+        </div>
+        <div class="meal-header">
+          <div class="meal-name">Dinner</div>
         </div>
       </div>
       
-      <!-- Lunch Row -->
-      <div class="meal-row">
-        <div class="meal-type">Lunch</div>
+      <!-- Day Rows - Each day gets its own row -->
+      <div 
+        v-for="dayData in weekData" 
+        :key="dayData.dayName"
+        class="day-row"
+      >
+        <!-- Day Header -->
+        <div class="day-header-cell">
+          <div class="day-name">{{ dayData.dayName }}</div>
+          <div class="day-date">{{ dayData.dateStr }}</div>
+        </div>
+        
+        <!-- Lunch Cell -->
         <div 
-          v-for="day in daysOfWeek" 
-          :key="`lunch-${day}`" 
           class="meal-cell" 
-          @click="openDishOptions('lunch', day)"
+          @click="openDishOptions('lunch', dayData.dayName)"
+          :style="mealPlan[dayData.dayName]?.lunch && duplicateColors[mealPlan[dayData.dayName].lunch] ? 
+            { backgroundColor: duplicateColors[mealPlan[dayData.dayName].lunch] } : {}"
         >
-          <div class="meal-content" v-if="mealPlan[day].lunch">
-            <img 
-              :src="mealPlan[day].lunch === 'Eating Out' ? eatingOutImagePath : getDishImage(mealPlan[day].lunch)" 
-              :alt="mealPlan[day].lunch" 
-              class="dish-image"
-              :class="{'eating-out': mealPlan[day].lunch === 'Eating Out'}"
-            >
-            <div class="dish-name">{{ mealPlan[day].lunch }}</div>
+          <div class="meal-content" v-if="mealPlan[dayData.dayName]?.lunch">
+            <div class="dish-name">{{ mealPlan[dayData.dayName].lunch }}</div>
           </div>
           <div class="empty-meal" v-else>Click to add</div>
         </div>
-      </div>
-      
-      <!-- Dinner Row -->
-      <div class="meal-row">
-        <div class="meal-type">Dinner</div>
+        
+        <!-- Dinner Cell -->
         <div 
-          v-for="day in daysOfWeek" 
-          :key="`dinner-${day}`" 
           class="meal-cell" 
-          @click="openDishOptions('dinner', day)"
+          @click="openDishOptions('dinner', dayData.dayName)"
+          :style="mealPlan[dayData.dayName]?.dinner && duplicateColors[mealPlan[dayData.dayName].dinner] ? 
+            { backgroundColor: duplicateColors[mealPlan[dayData.dayName].dinner] } : {}"
         >
-          <div class="meal-content" v-if="mealPlan[day].dinner">
-            <img 
-              :src="mealPlan[day].dinner === 'Eating Out' ? eatingOutImagePath : getDishImage(mealPlan[day].dinner)" 
-              :alt="mealPlan[day].dinner" 
-              class="dish-image"
-              :class="{'eating-out': mealPlan[day].dinner === 'Eating Out'}"
-            >
-            <div class="dish-name">{{ mealPlan[day].dinner }}</div>
+          <div class="meal-content" v-if="mealPlan[dayData.dayName]?.dinner">
+            <div class="dish-name">{{ mealPlan[dayData.dayName].dinner }}</div>
           </div>
           <div class="empty-meal" v-else>Click to add</div>
         </div>
@@ -291,33 +369,48 @@ const checkForMeals = () => {
     <!-- Dish Selection Modal -->
     <div v-if="showModal" class="modal-overlay" @click="showModal = false">
       <div class="modal-content" @click.stop>
-        <h2>Select an option for {{ currentSelection.mealType === 'lunch' ? 'Lunch' : 'Dinner' }}</h2>
-        
-        <div class="option-buttons">
-          <button @click="selectOption('random')" class="option-btn random-btn">
-            🎲 Choose Randomly
-          </button>
-          <button @click="selectOption('eating-out')" class="option-btn eating-out-btn">
-            🍽️ Eating Out
-          </button>
+        <div class="modal-header">
+          <h2>Select {{ currentSelection.mealType === 'lunch' ? 'Lunch' : 'Dinner' }}</h2>
+          <button class="close-btn-header" @click="showModal = false" aria-label="Close">×</button>
         </div>
         
         <div class="dish-list">
-          <h3>Or select a specific dish:</h3>
-          <div class="dish-grid">
-            <div 
-              v-for="dish in modalOptions" 
+          <div class="search-section">
+            <input 
+              v-model="searchQuery"
+              type="text"
+              placeholder="Search dishes..."
+              class="search-input"
+            />
+          </div>
+          
+          <h3>All Options:</h3>
+          <div class="dish-text-list">
+            <button 
+              v-for="dish in filteredDishes" 
               :key="dish" 
-              class="dish-option"
+              class="dish-text-option"
+              :class="{ 
+                'already-chosen': usedDishes.has(dish),
+                'add-new-option': dish.includes('To List')
+              }"
               @click="selectOption(dish)"
             >
-              <img :src="getDishImage(dish)" :alt="dish" class="option-image">
-              <div class="option-name">{{ dish }}</div>
-            </div>
+              {{ dish }}
+              <span v-if="usedDishes.has(dish)" class="chosen-indicator">✓</span>
+              <span v-if="dish.includes('To List')" class="add-new-indicator">+</span>
+            </button>
+            <button 
+              v-if="!searchQuery || 'eating out'.includes(searchQuery.toLowerCase())"
+              @click="selectOption('eating-out')" 
+              class="dish-text-option eating-out-option"
+            >
+              🍽️ Eating Out
+            </button>
           </div>
         </div>
         
-        <button class="close-btn" @click="showModal = false">Cancel</button>
+        <button class="close-btn-footer" @click="showModal = false">Close</button>
       </div>
     </div>
   </div>
@@ -358,9 +451,50 @@ h1 {
   font-size: 1.8rem;
 }
 
+.controls-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.date-selector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.date-selector label {
+  font-weight: 600;
+  color: var(--text-color);
+  font-size: 1rem;
+}
+
+.date-select {
+  padding: 0.5rem 1rem;
+  border: 2px solid var(--border-color);
+  border-radius: 4px;
+  background-color: white;
+  color: var(--text-color);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  min-width: 200px;
+}
+
+.date-select:hover {
+  border-color: var(--primary-color);
+}
+
+.date-select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(24, 119, 242, 0.1);
+}
+
 .generate-btn {
-  display: block;
-  margin: 0 auto 1.5rem;
   padding: 0.75rem 1.5rem;
   background-color: var(--primary-color);
   color: white;
@@ -394,57 +528,65 @@ h1 {
 
 .calendar-header {
   display: grid;
-  grid-template-columns: 100px repeat(7, 1fr);
+  grid-template-columns: 100px repeat(2, 1fr);
   background-color: var(--header-bg);
 }
 
 .corner-cell {
   border-right: 1px solid var(--border-color);
   border-bottom: 1px solid var(--border-color);
+  min-height: 40px;
 }
 
-.day-header {
-  padding: 0.75rem;
+.meal-header {
+  padding: 0.5rem;
   text-align: center;
+  border-right: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  background-color: var(--header-bg);
+}
+
+.meal-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.day-row {
+  display: grid;
+  grid-template-columns: 100px repeat(2, 1fr);
+}
+
+.day-header-cell {
+  padding: 0.5rem;
+  background-color: var(--header-bg);
+  font-weight: 600;
   border-right: 1px solid var(--border-color);
   border-bottom: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.25rem;
-  min-height: 60px;
-  position: relative;
+  gap: 0.2rem;
+  min-height: 100px;
 }
 
 .day-name {
   font-weight: 600;
+  font-size: 0.85rem;
 }
 
 .day-date {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #666;
-}
-
-.meal-row {
-  display: grid;
-  grid-template-columns: 100px repeat(7, 1fr);
-}
-
-.meal-type {
-  padding: 0.75rem;
-  background-color: var(--header-bg);
-  font-weight: 600;
-  border-right: 1px solid var(--border-color);
-  border-bottom: 1px solid var(--border-color);
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .meal-cell {
   padding: 0.75rem;
-  min-height: 140px;
+  min-height: 80px;
   border-right: 1px solid var(--border-color);
   border-bottom: 1px solid var(--border-color);
   cursor: pointer;
@@ -454,32 +596,15 @@ h1 {
   justify-content: center;
   text-align: center;
   position: relative;
-  overflow: auto;
-  flex-direction: column;
-  gap: 0.5rem;
+  overflow: hidden;
 }
 
 .meal-content {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   width: 100%;
   height: 100%;
-}
-
-.dish-image {
-  width: 70px;
-  height: 70px;
-  object-fit: cover;
-  border-radius: 35px;
-  margin-bottom: 0.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s;
-}
-
-.meal-cell:hover .dish-image {
-  transform: scale(1.05);
 }
 
 .dish-name {
@@ -488,13 +613,15 @@ h1 {
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
+  line-height: 1.3;
+  font-weight: 500;
 }
 
 .empty-meal {
   color: #888;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-style: italic;
 }
 
@@ -523,80 +650,130 @@ h1 {
 /* Media Queries for Responsive Design */
 @media (max-width: 768px) {
   .meal-planner {
-    padding: 0.75rem;
+    padding: 0.5rem;
   }
   
   h1 {
-    font-size: 1.5rem;
-    margin-bottom: 1rem;
+    font-size: 1.4rem;
+    margin-bottom: 0.8rem;
+  }
+  
+  .controls-section {
+    gap: 0.6rem;
+    margin-bottom: 0.8rem;
+  }
+  
+  .date-select {
+    min-width: 160px;
+    font-size: 0.85rem;
+    padding: 0.4rem 0.8rem;
   }
   
   .generate-btn {
-    padding: 0.6rem 1.2rem;
-    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
   }
   
-  .calendar-header, .meal-row {
-    grid-template-columns: 80px repeat(7, 1fr);
+  .calendar-header, .day-row {
+    grid-template-columns: 80px repeat(2, 1fr);
   }
   
-  .day-header, .meal-type, .meal-cell {
-    padding: 0.5rem;
-    font-size: 0.9rem;
+  .meal-header, .day-header-cell, .meal-cell {
+    padding: 0.4rem;
+    font-size: 0.8rem;
+  }
+  
+  .day-header-cell {
+    min-height: 80px;
   }
   
   .meal-cell {
-    min-height: 120px;
+    min-height: 70px;
   }
   
-  .dish-image {
-    width: 60px;
-    height: 60px;
-    border-radius: 30px;
+  .dish-name {
+    font-size: 0.8rem;
+  }
+  
+  .day-name {
+    font-size: 0.8rem;
+  }
+  
+  .day-date {
+    font-size: 0.7rem;
   }
 }
 
 @media (max-width: 480px) {
+  .meal-planner {
+    padding: 0.3rem;
+  }
+  
   .weekly-calendar {
     overflow-x: auto;
   }
   
-  .calendar-header, .meal-row {
-    grid-template-columns: 60px repeat(7, 100px);
-    min-width: 760px; /* Ensure grid doesn't shrink too much */
+  .calendar-header, .day-row {
+    grid-template-columns: 70px repeat(2, 1fr);
+    min-width: 300px;
   }
   
   h1 {
-    font-size: 1.3rem;
+    font-size: 1.2rem;
+    margin-bottom: 0.6rem;
+  }
+  
+  .controls-section {
+    gap: 0.4rem;
+    margin-bottom: 0.6rem;
+  }
+  
+  .date-select {
+    width: 100%;
+    min-width: unset;
+    font-size: 0.8rem;
+    padding: 0.3rem 0.6rem;
   }
   
   .generate-btn {
     width: 100%;
-    padding: 0.5rem;
-  }
-  
-  .day-header, .meal-type, .meal-cell {
-    padding: 0.5rem;
+    padding: 0.4rem;
     font-size: 0.8rem;
   }
   
-  .meal-cell {
-    min-height: 100px;
+  .meal-header, .day-header-cell, .meal-cell {
+    padding: 0.3rem;
+    font-size: 0.75rem;
   }
   
-  .dish-image {
-    width: 50px;
-    height: 50px;
-    border-radius: 25px;
+  .day-header-cell {
+    min-height: 70px;
+  }
+  
+  .meal-cell {
+    min-height: 60px;
   }
   
   .dish-name {
     font-size: 0.75rem;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 3;
+    line-height: 1.2;
+  }
+  
+  .day-name {
+    font-size: 0.75rem;
+  }
+  
+  .day-date {
+    font-size: 0.65rem;
+  }
+  
+  .empty-meal {
+    font-size: 0.7rem;
   }
 }
 
-/* New modal styles */
+/* Modal styles */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -608,162 +785,274 @@ h1 {
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  padding: 1rem;
 }
 
 .modal-content {
   background-color: white;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  width: 90%;
-  max-width: 700px;
+  width: 100%;
+  max-width: 400px;
   max-height: 80vh;
   overflow-y: auto;
-  padding: 20px;
-}
-
-.modal-content h2 {
-  text-align: center;
-  color: var(--primary-color);
-  margin-top: 0;
-  margin-bottom: 20px;
-}
-
-.option-buttons {
   display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-  justify-content: center;
+  flex-direction: column;
 }
 
-.option-btn {
-  padding: 12px 20px;
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1rem 0.5rem 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-header h2 {
+  color: var(--primary-color);
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.close-btn-header {
+  background: none;
   border: none;
-  border-radius: 6px;
-  font-weight: bold;
+  font-size: 1.5rem;
   cursor: pointer;
-  transition: all 0.2s;
-  flex: 1;
-  min-width: 150px;
+  color: #666;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
 }
 
-.random-btn {
-  background-color: #4CAF50;
-  color: white;
+.close-btn-header:hover {
+  background-color: #f0f0f0;
 }
 
-.random-btn:hover {
-  background-color: #3e8e41;
+.eating-out-option {
+  background-color: #fff3e0 !important;
+  border-color: #ffcc80 !important;
+  color: #e65100 !important;
 }
 
-.eating-out-btn {
-  background-color: #ff9800;
-  color: white;
-}
-
-.eating-out-btn:hover {
-  background-color: #e68a00;
+.eating-out-option:hover {
+  background-color: #ffe0b2 !important;
+  border-color: #ffb74d !important;
 }
 
 .dish-list {
-  margin-top: 20px;
+  padding: 1rem;
+  flex: 1;
+}
+
+.search-section {
+  margin-bottom: 1rem;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e9ecef;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(24, 119, 242, 0.1);
 }
 
 .dish-list h3 {
-  text-align: center;
-  margin-bottom: 15px;
+  margin: 0 0 0.75rem 0;
   color: #555;
+  font-size: 0.95rem;
 }
 
-.dish-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 15px;
-}
-
-.dish-option {
-  border: 1px solid #eee;
-  border-radius: 8px;
-  padding: 10px;
-  cursor: pointer;
-  transition: all 0.2s;
+.dish-text-list {
   display: flex;
   flex-direction: column;
+  gap: 0.5rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.dish-text-option {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+  font-size: 0.85rem;
+  color: #333;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
 }
 
-.dish-option:hover {
-  background-color: #f5f5f5;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+.dish-text-option:hover {
+  background-color: #e9ecef;
+  border-color: var(--primary-color);
+  transform: translateY(-1px);
 }
 
-.option-image {
-  width: 80px;
-  height: 80px;
-  border-radius: 40px;
-  object-fit: cover;
-  margin-bottom: 10px;
+.dish-text-option:active {
+  transform: translateY(0);
 }
 
-.option-name {
-  text-align: center;
+.dish-text-option.already-chosen {
+  background-color: #f0f0f0;
+  color: #666;
+  border-color: #d0d0d0;
+}
+
+.dish-text-option.already-chosen:hover {
+  background-color: #e8e8e8;
+  border-color: #c0c0c0;
+}
+
+.chosen-indicator {
+  color: #28a745;
+  font-weight: bold;
   font-size: 0.9rem;
 }
 
-.close-btn {
-  display: block;
-  margin: 20px auto 0;
-  padding: 8px 15px;
-  background-color: #f44336;
+.add-new-option {
+  background-color: #e3f2fd !important;
+  border-color: #2196f3 !important;
+  color: #1565c0 !important;
+  font-weight: 600;
+}
+
+.add-new-option:hover {
+  background-color: #bbdefb !important;
+  border-color: #1976d2 !important;
+}
+
+.add-new-indicator {
+  color: #2196f3;
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+.close-btn-footer {
+  margin: 0.5rem 1rem 1rem 1rem;
+  padding: 0.75rem;
+  background-color: #6c757d;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
 }
 
-.close-btn:hover {
-  background-color: #d32f2f;
+.close-btn-footer:hover {
+  background-color: #5a6268;
 }
 
-.eating-out {
-  opacity: 0.6;
-  filter: grayscale(80%);
-}
+/* Removed eating-out image styles (no longer using images) */
 
 /* Media queries for the modal */
 @media (max-width: 768px) {
+  .modal-overlay {
+    padding: 0.5rem;
+  }
+  
   .modal-content {
-    width: 95%;
-    padding: 15px;
+    max-width: 350px;
   }
   
-  .dish-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 10px;
+  .modal-header {
+    padding: 0.75rem 0.75rem 0.5rem 0.75rem;
   }
   
-  .option-image {
-    width: 70px;
-    height: 70px;
+  .modal-header h2 {
+    font-size: 1rem;
+  }
+  
+  .dish-list {
+    padding: 0.75rem;
+  }
+  
+  .search-input {
+    padding: 0.6rem;
+    font-size: 0.85rem;
+  }
+  
+  .dish-text-option {
+    padding: 0.6rem;
+    font-size: 0.8rem;
+  }
+  
+  .close-btn-footer {
+    margin: 0.5rem 0.75rem 0.75rem 0.75rem;
+    padding: 0.6rem;
+    font-size: 0.85rem;
   }
 }
 
 @media (max-width: 480px) {
-  .option-buttons {
-    flex-direction: column;
+  .modal-overlay {
+    padding: 0.25rem;
   }
   
-  .dish-grid {
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  .modal-content {
+    max-width: none;
+    width: 100%;
+    max-height: 85vh;
   }
   
-  .option-image {
-    width: 60px;
-    height: 60px;
+  .modal-header {
+    padding: 0.6rem;
   }
   
-  .option-name {
+  .modal-header h2 {
+    font-size: 0.95rem;
+  }
+  
+  .close-btn-header {
+    width: 28px;
+    height: 28px;
+    font-size: 1.3rem;
+  }
+  
+  .dish-list {
+    padding: 0.6rem;
+  }
+  
+  .dish-list h3 {
+    font-size: 0.9rem;
+    margin-bottom: 0.6rem;
+  }
+  
+  .dish-text-list {
+    gap: 0.4rem;
+    max-height: 250px;
+  }
+  
+  .search-input {
+    padding: 0.5rem;
+    font-size: 0.8rem;
+  }
+  
+  .dish-text-option {
+    padding: 0.5rem;
+    font-size: 0.8rem;
+  }
+  
+  .close-btn-footer {
+    margin: 0.4rem 0.6rem 0.6rem 0.6rem;
+    padding: 0.5rem;
     font-size: 0.8rem;
   }
 }

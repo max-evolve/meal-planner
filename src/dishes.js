@@ -15,14 +15,15 @@ export const lightDishes = [
     "Orzo Salad",
     "Smashed Potatoes Salad",
     "Brussels Sprouts Salad",
-    "Chicken/Veg Tacos",
+    "Tacos - Chicken",
     "Egg Curry & Roti",
-    "Grilled Chicken Veggies",
+    "Grilled Chicken & Veggies",
     "Spinach Thecha & Rice",
     "Paneer Kulcha",
-    "Aglio e Olio",
+    "Aglio E Olio",
     "Soya Pulao",
-    "Veg / Chicken Noodles",
+    "Noodles - Chicken",
+    "Noodles - Veg",
     "Khichdi",
     "Paneer Bhurji & Roti",
     "Peri Peri Chicken / Paneer Rice Bowl",
@@ -41,7 +42,7 @@ export const dinnerOnlyDishes = [
     "Rajma & Rice",
     "Katsu Curry & Rice",
     "Mushroom / White Sauce Pasta",
-    "Palak Paneer & Rice/Roti",
+    "Palak Paneer & Roti",
     "Aloo Gobhi & Roti & Raita"
 ];
 
