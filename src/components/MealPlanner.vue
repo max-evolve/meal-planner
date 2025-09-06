@@ -133,6 +133,37 @@ const duplicateColors = computed(() => {
   return colorMap;
 });
 
+// Function to format meal plan for WhatsApp
+const formatMealPlanForWhatsApp = () => {
+  let message = "🍽️ *Weekly Meal Plan*\n\n";
+  
+  weekData.value.forEach((dayData, index) => {
+    const dayName = dayData.dayName;
+    const dateStr = dayData.dateStr;
+    const lunch = mealPlan.value[dayName]?.lunch || "Not planned";
+    const dinner = mealPlan.value[dayName]?.dinner || "Not planned";
+    
+    // Format each day with better structure
+    message += `*${index + 1}. ${dateStr}*\n`;
+    message += `   🥗 Lunch: ${lunch}\n`;
+    message += `   🍽️ Dinner: ${dinner}\n\n`;
+  });
+  
+  message += "Bon appétit! 👨‍🍳👩‍🍳";
+  
+  return message.trim();
+};
+
+// Function to share meal plan via WhatsApp
+const shareToWhatsApp = () => {
+  const message = formatMealPlanForWhatsApp();
+  const encodedMessage = encodeURIComponent(message);
+  const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
+  
+  // Open WhatsApp in a new window/tab
+  window.open(whatsappUrl, '_blank');
+};
+
 // Removed getDishImage function (no longer using images)
 
 // Function to get available dishes for a specific meal type
@@ -424,6 +455,13 @@ const checkForMeals = () => {
       <div class="info-text">
         <p><small>Click to select from list • Double-click for random dish</small></p>
       </div>
+      
+      <!-- WhatsApp Share Button -->
+      <div class="share-section">
+        <button class="whatsapp-btn" @click="shareToWhatsApp">
+          📱 Share to WhatsApp
+        </button>
+      </div>
     </div>
     
     <!-- Dish Selection Modal -->
@@ -707,6 +745,40 @@ h1 {
   padding: 0 0.75rem;
 }
 
+/* WhatsApp Share Button */
+.share-section {
+  text-align: center;
+  margin: 1rem 0;
+  padding: 0 0.75rem;
+}
+
+.whatsapp-btn {
+  background: #25d366;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 25px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(37, 211, 102, 0.3);
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.whatsapp-btn:hover {
+  background: #128c7e;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4);
+}
+
+.whatsapp-btn:active {
+  transform: translateY(0);
+}
+
 /* Media Queries for Responsive Design */
 @media (max-width: 768px) {
   .meal-planner {
@@ -761,6 +833,13 @@ h1 {
   
   .day-date {
     font-size: 0.7rem;
+  }
+  
+  .whatsapp-btn {
+    width: 100%;
+    max-width: 280px;
+    padding: 0.8rem 1rem;
+    font-size: 0.95rem;
   }
 }
 
