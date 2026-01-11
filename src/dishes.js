@@ -1,50 +1,90 @@
-// Light dishes that can be used for both lunch and dinner
-export const lightDishes = [
+// ============================================
+// DISHES ELIGIBLE FOR RANDOM GENERATION
+// ============================================
+
+// Light dishes eligible for random generation (can be used for both lunch and dinner)
+export const lightDishesRandomEligible = [
     "Couscous Chana Salad",
     "Spinach Corn Sandwich",
     "Moong Dal Cheela",
-    "Vermicelli",
-    "Uttapam",
-    "Masala Idli",
-    "Idli Sambhar",
-    "Tomato Soup",
-    "Minestrone Soup",
-    "Broccoli Soup",
-    "Caesar Salad",
+    "Vermicelli with Veggies",
+    "Soup + Grilled Chicken/Paneer ",
+    "Chicken Caesar Salad",
     "Pasta Salad",
     "Orzo Salad",
-    "Smashed Potatoes Salad",
-    "Brussels Sprouts Salad",
-    "Tacos - Chicken",
+    "Chicken burrito roll",
     "Egg Curry & Roti",
     "Grilled Chicken & Veggies",
-    "Spinach Thecha & Rice",
-    "Paneer Kulcha",
-    "Aglio E Olio",
-    "Soya Pulao",
+    "Soya/Panner Cholle Pulao",
     "Noodles - Chicken",
-    "Noodles - Veg",
-    "Khichdi",
     "Paneer Bhurji & Roti",
     "Rice Bowl - Peri Peri Chicken",
+    "Rice Bowl - Kung Pao Chicken",
     "Rice Bowl - Peri Peri Paneer",
-    "Sabudana Khichdi",
     "Upma"
 ];
 
-// Heavier dishes reserved only for dinner
-export const dinnerOnlyDishes = [
-    "Chole & Rice",
-    "Shakshouka",
-    "Lasagna",
-    "Chicken Curry & Roti",
-    "Egg Curry & Roti",
-    "Bhindi Roti & Raita",
-    "Rajma & Rice",
+// Heavier dishes eligible for random generation (reserved only for dinner)
+export const dinnerOnlyDishesRandomEligible = [
+    "Shakshouka + Bread",
+    "Chicken Curry & Rice/Roti",
+    "Egg Curry & Rice/Roti",
     "Katsu Curry & Rice",
-    "Mushroom / White Sauce Pasta",
     "Palak Paneer & Roti",
+    
+    
+];
+
+// ============================================
+// DISHES EXCLUDED FROM RANDOM (MANUAL ONLY)
+// ============================================
+
+// Light dishes excluded from random generation but available for manual selection
+export const lightDishesManualOnly = [
+    // Add dishes here that you want to exclude from random generation
+    // but still be able to select manually
+    "Masala Idli",
+    "Smashed Potatoes Salad",
+    "Brussels Sprouts Salad",
+    "Minestrone Soup",
+    "Broccoli Soup",
+    "Uttapam",
+    "Paneer Kulcha",
+    "Spinach Thecha & Rice",
+    "Noodles - Veg",
+    "Khichdi",
+    "Sabudana Khichdi",
+    "Soya Salad Bowl",
+    "Aglio E Olio",
+];
+
+// Dinner-only dishes excluded from random generation but available for manual selection
+export const dinnerOnlyDishesManualOnly = [
+    // Add dishes here that you want to exclude from random generation
+    // but still be able to select manually
+    "Chole & Rice",
+    "Lasagna",
+    "Bhindi, Roti & Raita",
+    "Rajma & Rice",
+    "Mushroom / White Sauce Pasta",
     "Aloo Gobhi & Roti & Raita"
+
+];
+
+// ============================================
+// COMBINED CATEGORIES (for backward compatibility and modal display)
+// ============================================
+
+// All light dishes (both random-eligible and manual-only)
+export const lightDishes = [
+    ...lightDishesRandomEligible,
+    ...lightDishesManualOnly
+];
+
+// All dinner-only dishes (both random-eligible and manual-only)
+export const dinnerOnlyDishes = [
+    ...dinnerOnlyDishesRandomEligible,
+    ...dinnerOnlyDishesManualOnly
 ];
 
 // All dishes suitable for lunch (only light dishes)
@@ -56,4 +96,14 @@ export const lunchDishes = [
 export const dinnerDishes = [
     ...lightDishes,
     ...dinnerOnlyDishes
+];
+
+// Dishes eligible for random generation (for meal plan generation)
+export const lunchDishesRandomEligible = [
+    ...lightDishesRandomEligible
+];
+
+export const dinnerDishesRandomEligible = [
+    ...lightDishesRandomEligible,
+    ...dinnerOnlyDishesRandomEligible
 ];

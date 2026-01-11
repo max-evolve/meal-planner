@@ -1,6 +1,15 @@
 <script setup>
 import { ref, computed } from 'vue';
-import { lunchDishes, dinnerDishes, lightDishes, dinnerOnlyDishes } from '../dishes';
+import { 
+  lunchDishes, 
+  dinnerDishes, 
+  lightDishes, 
+  dinnerOnlyDishes,
+  lunchDishesRandomEligible,
+  dinnerDishesRandomEligible,
+  lightDishesRandomEligible,
+  dinnerOnlyDishesRandomEligible
+} from '../dishes';
 
 // Dynamic meal plan structure based on actual days
 const mealPlan = ref({});
@@ -15,8 +24,13 @@ const usedDishes = ref(new Set());
 const clickTimeout = ref(null);
 
 // Reactive arrays for dishes (so we can add new ones)
-const lightDishesReactive = ref([...lightDishes]);
-const dinnerOnlyDishesReactive = ref([...dinnerOnlyDishes]);
+// These include ALL dishes (both random-eligible and manual-only) for modal display
+const lightDishesReactive = ref(Array.isArray(lightDishes) ? [...lightDishes] : []);
+const dinnerOnlyDishesReactive = ref(Array.isArray(dinnerOnlyDishes) ? [...dinnerOnlyDishes] : []);
+
+// Reactive arrays for random-eligible dishes only (for random generation)
+const lightDishesRandomEligibleReactive = ref(Array.isArray(lightDishesRandomEligible) ? [...lightDishesRandomEligible] : []);
+const dinnerOnlyDishesRandomEligibleReactive = ref(Array.isArray(dinnerOnlyDishesRandomEligible) ? [...dinnerOnlyDishesRandomEligible] : []);
 
 // Helper function to convert text to Title Case
 const toTitleCase = (str) => {
@@ -114,10 +128,10 @@ const duplicateColors = computed(() => {
     const lunch = mealPlan.value[dayName]?.lunch;
     const dinner = mealPlan.value[dayName]?.dinner;
     
-    if (lunch && lunch !== "Eating Out") {
+    if (lunch && lunch !== "Eating Out" && lunch !== "Office meal") {
       dishCounts[lunch] = (dishCounts[lunch] || 0) + 1;
     }
-    if (dinner && dinner !== "Eating Out") {
+    if (dinner && dinner !== "Eating Out" && dinner !== "Office meal") {
       dishCounts[dinner] = (dishCounts[dinner] || 0) + 1;
     }
   });
@@ -205,12 +219,12 @@ const openDishOptions = (mealType, day) => {
   weekData.value.forEach(dayData => {
     const currentDay = dayData.dayName;
     if (currentDay !== day || mealType !== 'lunch') {
-      if (mealPlan.value[currentDay]?.lunch && mealPlan.value[currentDay].lunch !== "No more lunch options" && mealPlan.value[currentDay].lunch !== "Eating Out") {
+      if (mealPlan.value[currentDay]?.lunch && mealPlan.value[currentDay].lunch !== "No more lunch options" && mealPlan.value[currentDay].lunch !== "Eating Out" && mealPlan.value[currentDay].lunch !== "Office meal") {
         currentlyUsed.add(mealPlan.value[currentDay].lunch);
       }
     }
     if (currentDay !== day || mealType !== 'dinner') {
-      if (mealPlan.value[currentDay]?.dinner && mealPlan.value[currentDay].dinner !== "No more dinner options" && mealPlan.value[currentDay].dinner !== "Eating Out") {
+      if (mealPlan.value[currentDay]?.dinner && mealPlan.value[currentDay].dinner !== "No more dinner options" && mealPlan.value[currentDay].dinner !== "Eating Out" && mealPlan.value[currentDay].dinner !== "Office meal") {
         currentlyUsed.add(mealPlan.value[currentDay].dinner);
       }
     }
@@ -235,12 +249,19 @@ const selectOption = (option) => {
     // Set as Eating Out
     mealPlan.value[day][mealType] = "Eating Out";
   }
+  else if (option === 'office-meal') {
+    // Set as Office meal
+    mealPlan.value[day][mealType] = "Office meal";
+  }
   else if (option.startsWith('Add "') && option.endsWith('" To List')) {
     // Extract the new dish name from the option
     const newDishName = option.slice(5, -9); // Remove 'Add "' and '" To List'
     
-    // Add to light dishes (making it available for both lunch and dinner)
+    // Add to all dish arrays (making it available everywhere)
+    // Add to light dishes (for modal display)
     lightDishesReactive.value.push(newDishName);
+    // Add to random-eligible dishes (so it can be randomly selected)
+    lightDishesRandomEligibleReactive.value.push(newDishName);
     
     // Set the meal to the new dish
     mealPlan.value[day][mealType] = newDishName;
@@ -274,38 +295,40 @@ const handleDoubleClick = (mealType, day) => {
     clearTimeout(clickTimeout.value);
     clickTimeout.value = null;
   }
-  // Get all possible dishes
-  const allPossibleDishes = [...lightDishesReactive.value, ...dinnerOnlyDishesReactive.value];
+  // Get only random-eligible dishes for random selection
+  const randomEligibleDishes = mealType === 'lunch' 
+    ? [...lightDishesRandomEligibleReactive.value]
+    : [...lightDishesRandomEligibleReactive.value, ...dinnerOnlyDishesRandomEligibleReactive.value];
   
   // Get currently used dishes (excluding the one being replaced)
   const currentlyUsed = new Set();
   weekData.value.forEach(dayData => {
     const currentDay = dayData.dayName;
     if (currentDay !== day || mealType !== 'lunch') {
-      if (mealPlan.value[currentDay]?.lunch && mealPlan.value[currentDay].lunch !== "No more lunch options" && mealPlan.value[currentDay].lunch !== "Eating Out") {
+      if (mealPlan.value[currentDay]?.lunch && mealPlan.value[currentDay].lunch !== "No more lunch options" && mealPlan.value[currentDay].lunch !== "Eating Out" && mealPlan.value[currentDay].lunch !== "Office meal") {
         currentlyUsed.add(mealPlan.value[currentDay].lunch);
       }
     }
     if (currentDay !== day || mealType !== 'dinner') {
-      if (mealPlan.value[currentDay]?.dinner && mealPlan.value[currentDay].dinner !== "No more dinner options" && mealPlan.value[currentDay].dinner !== "Eating Out") {
+      if (mealPlan.value[currentDay]?.dinner && mealPlan.value[currentDay].dinner !== "No more dinner options" && mealPlan.value[currentDay].dinner !== "Eating Out" && mealPlan.value[currentDay].dinner !== "Office meal") {
         currentlyUsed.add(mealPlan.value[currentDay].dinner);
       }
     }
   });
   
   // Filter available dishes (exclude already used ones)
-  const availableDishes = allPossibleDishes.filter(dish => !currentlyUsed.has(dish));
+  const availableDishes = randomEligibleDishes.filter(dish => !currentlyUsed.has(dish));
   
-  // Select random dish
+  // Select random dish from eligible dishes only
   if (availableDishes.length > 0) {
     const randomIndex = Math.floor(Math.random() * availableDishes.length);
     const randomDish = availableDishes[randomIndex];
     mealPlan.value[day][mealType] = randomDish;
   } else {
-    // If no available dishes, use any dish
-    if (allPossibleDishes.length > 0) {
-      const randomIndex = Math.floor(Math.random() * allPossibleDishes.length);
-      const randomDish = allPossibleDishes[randomIndex];
+    // If no available dishes, use any random-eligible dish
+    if (randomEligibleDishes.length > 0) {
+      const randomIndex = Math.floor(Math.random() * randomEligibleDishes.length);
+      const randomDish = randomEligibleDishes[randomIndex];
       mealPlan.value[day][mealType] = randomDish;
     }
   }
@@ -329,15 +352,25 @@ const generateMealPlan = () => {
   mealPlan.value = {};
   
   // Generate a meal plan for each day of the week
+  // Use only random-eligible dishes for generation
   weekData.value.forEach(dayData => {
     const dayName = dayData.dayName;
     
-    // For lunch, we can only use light dishes
-    const lunch = getRandomDish(lunchDishes, usedDishes);
-    if (lunch) usedDishes.add(lunch);
+    // Check if it's Tuesday, Wednesday, or Thursday - set "Office meal" for lunch
+    const isOfficeMealDay = dayName === "Tuesday" || dayName === "Wednesday" || dayName === "Thursday";
     
-    // For dinner, we can use any dinner dish (light or dinner-only)
-    const dinner = getRandomDish(dinnerDishes, usedDishes);
+    // For lunch, use "Office meal" for Tue/Wed/Thu, otherwise use random-eligible light dishes
+    let lunch;
+    if (isOfficeMealDay) {
+      lunch = "Office meal";
+    } else {
+      lunch = getRandomDish(lightDishesRandomEligibleReactive.value, usedDishes);
+    if (lunch) usedDishes.add(lunch);
+    }
+    
+    // For dinner, use only random-eligible dishes (light or dinner-only)
+    const dinnerDishesForRandom = [...lightDishesRandomEligibleReactive.value, ...dinnerOnlyDishesRandomEligibleReactive.value];
+    const dinner = getRandomDish(dinnerDishesForRandom, usedDishes);
     if (dinner) usedDishes.add(dinner);
 
     mealPlan.value[dayName] = {
@@ -394,9 +427,9 @@ const checkForMeals = () => {
         </select>
       </div>
       
-      <button @click="generateMealPlan(); hasMeals = true;" class="generate-btn">
-        Generate Meal Plan
-      </button>
+    <button @click="generateMealPlan(); hasMeals = true;" class="generate-btn">
+      Generate Meal Plan
+    </button>
     </div>
     
     <div v-if="hasMeals" class="weekly-calendar">
@@ -435,8 +468,8 @@ const checkForMeals = () => {
             <div class="dish-name">{{ mealPlan[dayData.dayName].lunch }}</div>
           </div>
           <div class="empty-meal" v-else>Click to add</div>
-        </div>
-        
+      </div>
+      
         <!-- Dinner Cell -->
         <div 
           class="meal-cell" 
@@ -497,6 +530,13 @@ const checkForMeals = () => {
               {{ dish }}
               <span v-if="usedDishes.has(dish)" class="chosen-indicator">✓</span>
               <span v-if="dish.includes('To List')" class="add-new-indicator">+</span>
+            </button>
+            <button 
+              v-if="!searchQuery || 'office meal'.includes(searchQuery.toLowerCase())"
+              @click="selectOption('office-meal')" 
+              class="dish-text-option office-meal-option"
+            >
+              🏢 Office meal
             </button>
             <button 
               v-if="!searchQuery || 'eating out'.includes(searchQuery.toLowerCase())"
@@ -984,6 +1024,17 @@ h1 {
 .eating-out-option:hover {
   background-color: #ffe0b2 !important;
   border-color: #ffb74d !important;
+}
+
+.office-meal-option {
+  background-color: #e3f2fd !important;
+  border-color: #90caf9 !important;
+  color: #1565c0 !important;
+}
+
+.office-meal-option:hover {
+  background-color: #bbdefb !important;
+  border-color: #64b5f6 !important;
 }
 
 .dish-list {
